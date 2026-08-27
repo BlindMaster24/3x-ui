@@ -1,9 +1,33 @@
 package tgbot
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
+
+func TestIsTelegramNotModifiedError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil error", nil, false},
+		{"not modified", errors.New("Bad Request: message is not modified"), true},
+		{"No fields to modify", errors.New("Bad Request: No fields to modify"), true},
+		{"unrelated error", errors.New("Bad Request: message to edit not found"), false},
+		{"network error", errors.New("connection reset"), false},
+		{"empty string", errors.New(""), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isTelegramNotModifiedError(tt.err)
+			if got != tt.want {
+				t.Errorf("isTelegramNotModifiedError(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
+	}
+}
 
 func TestPageMessageSplitsLinkListWithoutBlankLines(t *testing.T) {
 	var message strings.Builder

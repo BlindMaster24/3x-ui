@@ -210,6 +210,10 @@ func (t *Tgbot) editMessageCallbackTgBot(chatId int64, messageID int, inlineKeyb
 		ReplyMarkup: inlineKeyboard,
 	}
 	if _, err := bot.EditMessageReplyMarkup(context.Background(), &params); err != nil {
+		if isTelegramNotModifiedError(err) {
+			logger.Debug("Telegram reply markup unchanged, skipping edit")
+			return
+		}
 		logger.Warning(err)
 	}
 }
@@ -226,8 +230,24 @@ func (t *Tgbot) editMessageTgBot(chatId int64, messageID int, text string, inlin
 		params.ReplyMarkup = inlineKeyboard[0]
 	}
 	if _, err := bot.EditMessageText(context.Background(), &params); err != nil {
+		if isTelegramNotModifiedError(err) {
+			logger.Debug("Telegram message text unchanged, skipping edit")
+			return
+		}
 		logger.Warning(err)
 	}
+}
+
+// isTelegramNotModifiedError checks if the Telegram API returned a "message
+// not modified" error, which happens when editMessageText or
+// editMessageReplyMarkup is called with content identical to the existing message.
+func isTelegramNotModifiedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "not modified") ||
+		strings.Contains(errStr, "No fields to modify")
 }
 
 // SendMsgToTgbotDeleteAfter sends a message and deletes it after a specified delay.
